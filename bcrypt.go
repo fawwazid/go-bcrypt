@@ -74,12 +74,13 @@ func Generate(password []byte, cost int) ([]byte, error) {
 // in Go's bcrypt implementation, but $2b$ signals modern practices.
 // Always returns a new slice to avoid mutating the input and ensure consistent behavior.
 func upgrade2aTo2b(hash []byte) []byte {
-	result := make([]byte, len(hash))
-	copy(result, hash)
 	if len(hash) > 3 && hash[0] == '$' && hash[1] == '2' && hash[2] == 'a' {
+		result := make([]byte, len(hash))
+		copy(result, hash)
 		result[2] = 'b'
+		return result
 	}
-	return result
+	return hash
 }
 
 // Compare compares a bcrypt hashed password with its possible plaintext equivalent.
