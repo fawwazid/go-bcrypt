@@ -319,7 +319,7 @@ func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
 
 func TestPasswordExactly72Bytes(t *testing.T) {
 	// Test the boundary condition where the password is exactly at bcrypt's native limit.
-	// This verifies the pre-hashing behavior is correctly triggered at the 72-byte boundary.
+	// This verifies that pre-hashing correctly handles passwords at bcrypt's native 72-byte limit.
 	password72 := make([]byte, bcryptPasswordLimit)
 	for i := 0; i < bcryptPasswordLimit; i++ {
 		password72[i] = 'a'
