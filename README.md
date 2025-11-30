@@ -1,4 +1,4 @@
-# Go - Bcrypt
+# Go - bcrypt
 
 A secure wrapper for Go's bcrypt implementation.
 
