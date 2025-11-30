@@ -21,8 +21,7 @@ import (
 
 const (
 	// DefaultCost is the default cost for the bcrypt algorithm.
-	// It is set to a work factor that takes a significant amount of time.
-	// 14 is a reasonable default for modern hardware.
+	// It is set to 14, a reasonable default for modern hardware.
 	DefaultCost = 14
 
 	// MinCost is the minimum allowed cost.
@@ -109,11 +108,8 @@ func Compare(hash, password []byte) error {
 		return nil
 	}
 
-	// Return the original error
-	if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		return err
-	}
-	return fmt.Errorf("gobcrypt: invalid hash: %w", err)
+	// Both encoding attempts failed; return a wrapped error with both error messages
+	return fmt.Errorf("gobcrypt: password comparison failed (current encoding: %w, legacy encoding: %v)", err, legacyErr)
 }
 
 // Cost returns the hashing cost used to create the given hash.
