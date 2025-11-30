@@ -14,7 +14,7 @@ import (
 func PreHashPassword(password []byte) []byte {
 	// SHA-256 hash (32 bytes)
 	hash := sha256.Sum256(password)
-	// Base64 encode to get a printable string (44 bytes total)
+	// Base64 encode to get a printable string (44 bytes for 32-byte SHA-256 hash)
 	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
 	base64.StdEncoding.Encode(encoded, hash[:])
 	return encoded
