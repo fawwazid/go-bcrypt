@@ -347,13 +347,13 @@ func TestPasswordExactly72Bytes(t *testing.T) {
 	}
 
 	// Verify a slightly different 72-byte password does NOT match
-	password72Different := make([]byte, bcryptPasswordLimit)
+	differentPass72 := make([]byte, bcryptPasswordLimit)
 	for i := 0; i < bcryptPasswordLimit-1; i++ {
-		password72Different[i] = 'a'
+		differentPass72[i] = 'a'
 	}
-	password72Different[bcryptPasswordLimit-1] = 'b'
+	differentPass72[bcryptPasswordLimit-1] = 'b'
 
-	if err := gobcrypt.Compare(hash, password72Different); err == nil {
+	if err := gobcrypt.Compare(hash, differentPass72); err == nil {
 		t.Error("Different 72-byte password should not verify against original hash")
 	}
 }
