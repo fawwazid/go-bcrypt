@@ -109,7 +109,7 @@ func Compare(hash, password []byte) error {
 	}
 
 	// Both encoding attempts failed; return a wrapped error with both error messages
-	return fmt.Errorf("gobcrypt: password comparison failed (current encoding: %v, legacy encoding: %v)", err, legacyErr)
+	return fmt.Errorf("gobcrypt: password comparison failed (current encoding: %w, legacy encoding: %v)", err, legacyErr)
 }
 
 // Cost returns the hashing cost used to create the given hash.
