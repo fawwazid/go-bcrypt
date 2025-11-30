@@ -116,7 +116,7 @@ The `Compare` function supports backward compatibility with hashes created using
 
 ### Why `$2b$`?
 Standard bcrypt implementations use version prefixes to indicate the algorithm variant.
--   `$2a$`: The standard for many years. Note: a bug affecting long passwords existed in some non-Go implementations (such as PHP), but Go's bcrypt implementation was never affected.
+-   `$2a$`: The standard for many years. Note: a bug affecting long passwords existed in some non-Go implementations (such as PHP), but Go's bcrypt implementation has always been correct and was never subject to these bugs.
 -   `$2b$`: The modern standard. This library uses `$2b$` for compatibility with current best practices and to signal a secure, up-to-date implementation.
 
 ## License

@@ -54,7 +54,7 @@ func Generate(password []byte, cost int) ([]byte, error) {
 
 	// Pre-hash the password to handle lengths > 72 bytes.
 	// We base64 encode the SHA-256 hash to keep it within the printable range bcrypt expects.
-	finalPassword := preHashPassword(password)
+	finalPassword := PreHashPassword(password)
 
 	hash, err := bcrypt.GenerateFromPassword(finalPassword, cost)
 	if err != nil {
@@ -94,7 +94,7 @@ func upgrade2aTo2b(hash []byte) []byte {
 // (RawStdEncoding without padding).
 func Compare(hash, password []byte) error {
 	// First try with current encoding (StdEncoding with padding)
-	finalPassword := preHashPassword(password)
+	finalPassword := PreHashPassword(password)
 	err := bcrypt.CompareHashAndPassword(hash, finalPassword)
 	if err == nil {
 		return nil
@@ -102,14 +102,14 @@ func Compare(hash, password []byte) error {
 
 	// If that failed, try with legacy encoding (RawStdEncoding without padding)
 	// for backward compatibility with older hashes
-	legacyPassword := preHashPasswordLegacy(password)
+	legacyPassword := PreHashPasswordLegacy(password)
 	legacyErr := bcrypt.CompareHashAndPassword(hash, legacyPassword)
 	if legacyErr == nil {
 		return nil
 	}
 
 	// Both encoding attempts failed; return a wrapped error with both error messages
-	return fmt.Errorf("gobcrypt: password comparison failed (current encoding: %w, legacy encoding: %v)", err, legacyErr)
+	return fmt.Errorf("gobcrypt: password comparison failed: %w", errors.Join(err, legacyErr))
 }
 
 // Cost returns the hashing cost used to create the given hash.
