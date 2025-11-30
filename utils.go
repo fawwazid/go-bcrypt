@@ -10,9 +10,9 @@ import (
 // providing consistent security for passwords of any length.
 // Note: All passwords are reduced to 256 bits of entropy by the SHA-256 hash.
 func preHashPassword(password []byte) []byte {
-	// SHA-256 hash
+	// SHA-256 hash (32 bytes)
 	hash := sha256.Sum256(password)
-	// Base64 encode to get a string-like byte slice (44 bytes with padding)
+	// Base64 encode to get a printable string (44 bytes total)
 	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
 	base64.StdEncoding.Encode(encoded, hash[:])
 	return encoded

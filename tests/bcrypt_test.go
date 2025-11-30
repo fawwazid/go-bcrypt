@@ -252,8 +252,9 @@ func TestUpgrade2aTo2b(t *testing.T) {
 		t.Errorf("Compare failed for hash with $2b$ prefix: %v", err)
 	}
 
-	// Manually create a hash with $2a$ prefix and verify it still works with Compare
-	// (since bcrypt can verify both $2a$ and $2b$ prefixes)
+	// Test that bcrypt library can verify both $2a$ and $2b$ prefixes.
+	// Note: We modify the prefix directly to test bcrypt's format tolerance,
+	// not to test actual $2a$ hash generation compatibility.
 	hashWithA := make([]byte, len(hash))
 	copy(hashWithA, hash)
 	hashWithA[2] = 'a' // Change $2b$ to $2a$
