@@ -22,6 +22,8 @@ func PreHashPassword(password []byte) []byte {
 
 // PreHashPasswordLegacy returns the legacy RawStdEncoding (no padding) base64 encoding.
 // Used for backward-compatible password verification with older hashes.
+// WARNING: This function is exported for testing and migration purposes only.
+// Do not use it directly with standard bcrypt functions; use the Compare function instead.
 func PreHashPasswordLegacy(password []byte) []byte {
 	hash := sha256.Sum256(password)
 	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
