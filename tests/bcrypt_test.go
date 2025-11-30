@@ -10,7 +10,7 @@ import (
 )
 
 // bcryptPasswordLimit is the maximum password length that bcrypt can process.
-// Passwords longer than this are truncated by standard bcrypt.
+// Passwords longer than this have bytes beyond position 72 ignored by standard bcrypt.
 const bcryptPasswordLimit = 72
 
 func TestGenerateAndCompare(t *testing.T) {
@@ -76,6 +76,12 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 	hash2, err := gobcrypt.Generate(pass2, gobcrypt.MinCost)
 	if err != nil {
 		t.Fatalf("Generate failed for pass2: %v", err)
+	}
+
+	// Verify hashes are different even though passwords differ only after byte 72
+	// This demonstrates that pre-hashing correctly differentiates these passwords
+	if string(hash1) == string(hash2) {
+		t.Error("Hashes should be different even though passwords differ only after byte 72")
 	}
 
 	// Verify each password works with its own hash

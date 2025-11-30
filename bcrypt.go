@@ -72,16 +72,14 @@ func Generate(password []byte, cost int) ([]byte, error) {
 // upgrade2aTo2b converts a bcrypt hash with $2a$ prefix to $2b$ prefix.
 // This is a cosmetic change as both prefixes are functionally equivalent
 // in Go's bcrypt implementation, but $2b$ signals modern practices.
-// Returns a new slice to avoid mutating the input.
+// Always returns a new slice to avoid mutating the input and ensure consistent behavior.
 func upgrade2aTo2b(hash []byte) []byte {
+	result := make([]byte, len(hash))
+	copy(result, hash)
 	if len(hash) > 3 && hash[0] == '$' && hash[1] == '2' && hash[2] == 'a' {
-		// Create a copy to avoid mutating the input
-		result := make([]byte, len(hash))
-		copy(result, hash)
 		result[2] = 'b'
-		return result
 	}
-	return hash
+	return result
 }
 
 // Compare compares a bcrypt hashed password with its possible plaintext equivalent.
@@ -96,7 +94,7 @@ func Compare(hash, password []byte) error {
 	err := bcrypt.CompareHashAndPassword(hash, finalPassword)
 	if err != nil {
 		// If it's already the mismatch error, return as-is
-		if err == bcrypt.ErrMismatchedHashAndPassword {
+		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return err
 		}
 		// Otherwise, wrap to preserve information about invalid hash
