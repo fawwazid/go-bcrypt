@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -59,6 +61,11 @@ func TestLongPassword(t *testing.T) {
 }
 
 func TestLongPasswordDifferentiation(t *testing.T) {
+	// This test verifies that the SHA-256 pre-hashing ensures passwords differing
+	// only beyond the 72-byte bcrypt limit do NOT cross-verify (i.e., each password
+	// should only verify against its own hash).
+	// Without pre-hashing, bcrypt would truncate both passwords and treat them as equal.
+	
 	// Two passwords identical in first bcryptPasswordLimit bytes but different after
 	pass1 := make([]byte, bcryptPasswordLimit+1)
 	pass2 := make([]byte, bcryptPasswordLimit+1)
@@ -78,8 +85,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Fatalf("Generate failed for pass2: %v", err)
 	}
 
-	// The following assertion is unreliable and has been removed.
-	// Bcrypt hashes will always differ due to random salts, regardless of password differences.
+	// Note: We don't compare the hashes directly because bcrypt hashes will
+	// always differ due to random salts, regardless of password differences.
 
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
@@ -89,7 +96,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Errorf("Compare failed for pass2 with hash2: %v", err)
 	}
 
-	// Verify they don't cross-verify (the key security property)
+	// The key security property: passwords that differ only beyond 72 bytes
+	// should NOT cross-verify. This proves SHA-256 pre-hashing is working.
 	if err := gobcrypt.Compare(hash1, pass2); err == nil {
 		t.Error("Different passwords should not verify: pass2 verified with hash1")
 	}
@@ -201,5 +209,110 @@ func TestStandardBcryptIncompatibility(t *testing.T) {
 	}
 	if err := gobcrypt.Compare(ourHash, password); err != nil {
 		t.Errorf("Compare should work with hashes from this library: %v", err)
+	}
+}
+
+func TestEmptyPassword(t *testing.T) {
+	// Test that empty passwords are handled correctly
+	emptyPassword := []byte{}
+
+	hash, err := gobcrypt.Generate(emptyPassword, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed for empty password: %v", err)
+	}
+
+	// Verify the empty password matches its hash
+	if err := gobcrypt.Compare(hash, emptyPassword); err != nil {
+		t.Errorf("Compare failed for empty password: %v", err)
+	}
+
+	// Verify a non-empty password does NOT match the empty password hash
+	if err := gobcrypt.Compare(hash, []byte("notEmpty")); err == nil {
+		t.Error("Non-empty password should not verify against empty password hash")
+	}
+}
+
+func TestUpgrade2aTo2b(t *testing.T) {
+	password := []byte("testpassword")
+
+	// Generate a hash using our library - it should have $2b$ prefix
+	hash, err := gobcrypt.Generate(password, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	// Verify the output has $2b$ prefix (testing that upgrade2aTo2b was applied)
+	if len(hash) < 4 {
+		t.Fatal("Hash too short")
+	}
+	prefix := string(hash[:4])
+	if prefix != "$2b$" {
+		t.Errorf("Expected prefix $2b$, got %s", prefix)
+	}
+
+	// Verify the hash works with Compare
+	if err := gobcrypt.Compare(hash, password); err != nil {
+		t.Errorf("Compare failed for hash with $2b$ prefix: %v", err)
+	}
+
+	// Test that the underlying bcrypt library generates $2a$ hashes by default,
+	// which proves our upgrade2aTo2b function is working.
+	// We use the pre-hashed password directly with standard bcrypt.
+	preHashed := preHashForTest(password)
+	standardHash, err := bcrypt.GenerateFromPassword(preHashed, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Standard bcrypt Generate failed: %v", err)
+	}
+
+	// The standard library produces $2a$ prefix
+	if string(standardHash[:4]) != "$2a$" {
+		t.Errorf("Expected standard bcrypt to produce $2a$ prefix, got %s", string(standardHash[:4]))
+	}
+
+	// Our library's output should be $2b$, proving the upgrade happened
+	if string(hash[:4]) != "$2b$" {
+		t.Errorf("Our library should produce $2b$ prefix, got %s", string(hash[:4]))
+	}
+}
+
+// preHashForTest duplicates the pre-hashing logic for testing purposes.
+// This allows us to test with standard bcrypt directly.
+func preHashForTest(password []byte) []byte {
+	hash := sha256.Sum256(password)
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
+	base64.StdEncoding.Encode(encoded, hash[:])
+	return encoded
+}
+
+// preHashLegacy duplicates the legacy pre-hashing logic (RawStdEncoding without padding).
+func preHashLegacy(password []byte) []byte {
+	hash := sha256.Sum256(password)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
+	base64.RawStdEncoding.Encode(encoded, hash[:])
+	return encoded
+}
+
+func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
+	password := []byte("testpassword")
+
+	// Simulate a legacy hash created with RawStdEncoding (no padding)
+	legacyPreHashed := preHashLegacy(password)
+	legacyHash, err := bcrypt.GenerateFromPassword(legacyPreHashed, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Failed to create legacy hash: %v", err)
+	}
+
+	// Our Compare function should be able to verify this legacy hash
+	if err := gobcrypt.Compare(legacyHash, password); err != nil {
+		t.Errorf("Compare should work with legacy hashes (RawStdEncoding): %v", err)
+	}
+
+	// Also verify new hashes work
+	newHash, err := gobcrypt.Generate(password, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+	if err := gobcrypt.Compare(newHash, password); err != nil {
+		t.Errorf("Compare should work with new hashes (StdEncoding): %v", err)
 	}
 }
