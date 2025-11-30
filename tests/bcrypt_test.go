@@ -9,6 +9,10 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// bcryptPasswordLimit is the maximum password length that bcrypt can process.
+// Passwords longer than this are truncated by standard bcrypt.
+const bcryptPasswordLimit = 72
+
 func TestGenerateAndCompare(t *testing.T) {
 	password := []byte("mysecretpassword")
 
@@ -55,15 +59,15 @@ func TestLongPassword(t *testing.T) {
 }
 
 func TestLongPasswordDifferentiation(t *testing.T) {
-	// Two passwords identical in first 72 bytes but different after
-	pass1 := make([]byte, 73)
-	pass2 := make([]byte, 73)
-	for i := 0; i < 72; i++ {
+	// Two passwords identical in first bcryptPasswordLimit bytes but different after
+	pass1 := make([]byte, bcryptPasswordLimit+1)
+	pass2 := make([]byte, bcryptPasswordLimit+1)
+	for i := 0; i < bcryptPasswordLimit; i++ {
 		pass1[i] = 'x'
 		pass2[i] = 'x'
 	}
-	pass1[72] = 'a'
-	pass2[72] = 'b'
+	pass1[bcryptPasswordLimit] = 'a'
+	pass2[bcryptPasswordLimit] = 'b'
 
 	hash1, err := gobcrypt.Generate(pass1, gobcrypt.MinCost)
 	if err != nil {
