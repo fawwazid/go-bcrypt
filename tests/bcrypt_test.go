@@ -275,28 +275,13 @@ func TestUpgrade2aTo2b(t *testing.T) {
 	}
 }
 
-// preHashForTest duplicates the pre-hashing logic for testing purposes.
-// This allows us to test with standard bcrypt directly.
-func preHashForTest(password []byte) []byte {
-	hash := sha256.Sum256(password)
-	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
-	base64.StdEncoding.Encode(encoded, hash[:])
-	return encoded
-}
-
-// preHashLegacy duplicates the legacy pre-hashing logic (RawStdEncoding without padding).
-func preHashLegacy(password []byte) []byte {
-	hash := sha256.Sum256(password)
-	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
-	base64.RawStdEncoding.Encode(encoded, hash[:])
-	return encoded
-}
+// Use gobcrypt.PreHashPassword and gobcrypt.PreHashPasswordLegacy for pre-hashing in tests.
 
 func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
 	password := []byte("testpassword")
 
 	// Simulate a legacy hash created with RawStdEncoding (no padding)
-	legacyPreHashed := preHashLegacy(password)
+	legacyPreHashed := gobcrypt.PreHashPasswordLegacy(password)
 	legacyHash, err := bcrypt.GenerateFromPassword(legacyPreHashed, gobcrypt.MinCost)
 	if err != nil {
 		t.Fatalf("Failed to create legacy hash: %v", err)
