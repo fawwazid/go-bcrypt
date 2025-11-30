@@ -303,7 +303,6 @@ func TestUpgrade2aTo2b(t *testing.T) {
 
 // TestBackwardCompatibilityWithLegacyHashes tests backward compatibility with hashes
 // created using the legacy RawStdEncoding (no padding) pre-hashing method.
-
 func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
 	password := []byte("testpassword")
 
