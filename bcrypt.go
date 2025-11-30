@@ -42,8 +42,9 @@ var ErrCostTooLow = errors.New("gobcrypt: cost is below minimum allowed cost")
 // If the cost is greater than MaxCost, it returns an error.
 //
 // IMPORTANT: This function pre-hashes ALL passwords with SHA-256 before bcrypt.
-// This ensures passwords longer than 72 bytes retain full entropy, but makes
-// the resulting hashes incompatible with standard bcrypt implementations.
+// This ensures passwords of any length are processed consistently and securely,
+// but all passwords are reduced to 256 bits of entropy, making the resulting hashes
+// incompatible with standard bcrypt implementations.
 func Generate(password []byte, cost int) ([]byte, error) {
 	if cost < MinCost {
 		return nil, fmt.Errorf("%w: got %d", ErrCostTooLow, cost)

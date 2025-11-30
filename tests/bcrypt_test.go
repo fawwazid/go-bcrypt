@@ -59,6 +59,10 @@ func TestLongPassword(t *testing.T) {
 }
 
 func TestLongPasswordDifferentiation(t *testing.T) {
+	// This test verifies that the SHA-256 pre-hashing ensures passwords differing
+	// only beyond the 72-byte bcrypt limit produce different verification results.
+	// Without pre-hashing, bcrypt would truncate both passwords and treat them as equal.
+	
 	// Two passwords identical in first bcryptPasswordLimit bytes but different after
 	pass1 := make([]byte, bcryptPasswordLimit+1)
 	pass2 := make([]byte, bcryptPasswordLimit+1)
@@ -78,8 +82,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Fatalf("Generate failed for pass2: %v", err)
 	}
 
-	// The following assertion is unreliable and has been removed.
-	// Bcrypt hashes will always differ due to random salts, regardless of password differences.
+	// Note: We don't compare the hashes directly because bcrypt hashes will
+	// always differ due to random salts, regardless of password differences.
 
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
@@ -89,7 +93,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Errorf("Compare failed for pass2 with hash2: %v", err)
 	}
 
-	// Verify they don't cross-verify (the key security property)
+	// The key security property: passwords that differ only beyond 72 bytes
+	// should NOT cross-verify. This proves SHA-256 pre-hashing is working.
 	if err := gobcrypt.Compare(hash1, pass2); err == nil {
 		t.Error("Different passwords should not verify: pass2 verified with hash1")
 	}
@@ -201,5 +206,60 @@ func TestStandardBcryptIncompatibility(t *testing.T) {
 	}
 	if err := gobcrypt.Compare(ourHash, password); err != nil {
 		t.Errorf("Compare should work with hashes from this library: %v", err)
+	}
+}
+
+func TestEmptyPassword(t *testing.T) {
+	// Test that empty passwords are handled correctly
+	emptyPassword := []byte{}
+
+	hash, err := gobcrypt.Generate(emptyPassword, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed for empty password: %v", err)
+	}
+
+	// Verify the empty password matches its hash
+	if err := gobcrypt.Compare(hash, emptyPassword); err != nil {
+		t.Errorf("Compare failed for empty password: %v", err)
+	}
+
+	// Verify a non-empty password does NOT match the empty password hash
+	if err := gobcrypt.Compare(hash, []byte("notEmpty")); err == nil {
+		t.Error("Non-empty password should not verify against empty password hash")
+	}
+}
+
+func TestUpgrade2aTo2b(t *testing.T) {
+	password := []byte("testpassword")
+
+	// Generate a hash and verify it has $2b$ prefix
+	hash, err := gobcrypt.Generate(password, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+
+	// Check that the prefix is $2b$
+	if len(hash) < 4 {
+		t.Fatal("Hash too short")
+	}
+	prefix := string(hash[:4])
+	if prefix != "$2b$" {
+		t.Errorf("Expected prefix $2b$, got %s", prefix)
+	}
+
+	// Verify the hash still works with Compare
+	if err := gobcrypt.Compare(hash, password); err != nil {
+		t.Errorf("Compare failed for hash with $2b$ prefix: %v", err)
+	}
+
+	// Manually create a hash with $2a$ prefix and verify it still works with Compare
+	// (since bcrypt can verify both $2a$ and $2b$ prefixes)
+	hashWithA := make([]byte, len(hash))
+	copy(hashWithA, hash)
+	hashWithA[2] = 'a' // Change $2b$ to $2a$
+
+	// Verify Compare still works with $2a$ prefix (bcrypt handles both)
+	if err := gobcrypt.Compare(hashWithA, password); err != nil {
+		t.Errorf("Compare should work with $2a$ prefix: %v", err)
 	}
 }
