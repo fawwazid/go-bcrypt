@@ -86,7 +86,7 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 	}
 
 	// Note: We don't compare the hashes directly because bcrypt hashes will
-	// always differ due to random salts, regardless of password differences.
+	// always differ due to random salts, regardless of different passwords.
 
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
