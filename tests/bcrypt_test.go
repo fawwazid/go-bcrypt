@@ -1,8 +1,6 @@
 package tests
 
 import (
-	"crypto/sha256"
-	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -134,6 +132,34 @@ func TestCostValidation(t *testing.T) {
 	}
 }
 
+// TestMaxCostValidation tests that MaxCost (31) produces a valid hash.
+// Note: This test is skipped in short mode because cost 31 is extremely slow.
+func TestMaxCostValidation(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping MaxCost test in short mode (cost 31 is very slow)")
+	}
+
+	password := []byte("testpassword")
+	hash, err := gobcrypt.Generate(password, gobcrypt.MaxCost)
+	if err != nil {
+		t.Fatalf("Generate failed with MaxCost: %v", err)
+	}
+
+	// Verify the hash works
+	if err := gobcrypt.Compare(hash, password); err != nil {
+		t.Fatalf("Compare failed with MaxCost hash: %v", err)
+	}
+
+	// Verify the cost is correct
+	cost, err := gobcrypt.Cost(hash)
+	if err != nil {
+		t.Fatalf("Cost failed: %v", err)
+	}
+	if cost != gobcrypt.MaxCost {
+		t.Errorf("Expected cost %d, got %d", gobcrypt.MaxCost, cost)
+	}
+}
+
 func TestCost(t *testing.T) {
 	password := []byte("testpass")
 	expectedCost := 12
@@ -258,7 +284,7 @@ func TestUpgrade2aTo2b(t *testing.T) {
 	// Test that the underlying bcrypt library generates $2a$ hashes by default,
 	// which proves our upgrade2aTo2b function is working.
 	// We use the pre-hashed password directly with standard bcrypt.
-	preHashed := preHashForTest(password)
+	preHashed := gobcrypt.PreHashPassword(password)
 	standardHash, err := bcrypt.GenerateFromPassword(preHashed, gobcrypt.MinCost)
 	if err != nil {
 		t.Fatalf("Standard bcrypt Generate failed: %v", err)
@@ -275,8 +301,8 @@ func TestUpgrade2aTo2b(t *testing.T) {
 	}
 }
 
-// Use gobcrypt.PreHashPassword and gobcrypt.PreHashPasswordLegacy for pre-hashing in tests.
-
+// TestBackwardCompatibilityWithLegacyHashes tests backward compatibility with hashes
+// created using the legacy RawStdEncoding (no padding) pre-hashing method.
 func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
 	password := []byte("testpassword")
 
