@@ -1,6 +1,8 @@
 package tests
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"testing"
 
@@ -60,7 +62,8 @@ func TestLongPassword(t *testing.T) {
 
 func TestLongPasswordDifferentiation(t *testing.T) {
 	// This test verifies that the SHA-256 pre-hashing ensures passwords differing
-	// only beyond the 72-byte bcrypt limit produce different verification results.
+	// only beyond the 72-byte bcrypt limit do NOT cross-verify (i.e., each password
+	// should only verify against its own hash).
 	// Without pre-hashing, bcrypt would truncate both passwords and treat them as equal.
 	
 	// Two passwords identical in first bcryptPasswordLimit bytes but different after
@@ -232,13 +235,13 @@ func TestEmptyPassword(t *testing.T) {
 func TestUpgrade2aTo2b(t *testing.T) {
 	password := []byte("testpassword")
 
-	// Generate a hash and verify it has $2b$ prefix
+	// Generate a hash using our library - it should have $2b$ prefix
 	hash, err := gobcrypt.Generate(password, gobcrypt.MinCost)
 	if err != nil {
 		t.Fatalf("Generate failed: %v", err)
 	}
 
-	// Check that the prefix is $2b$
+	// Verify the output has $2b$ prefix (testing that upgrade2aTo2b was applied)
 	if len(hash) < 4 {
 		t.Fatal("Hash too short")
 	}
@@ -247,20 +250,69 @@ func TestUpgrade2aTo2b(t *testing.T) {
 		t.Errorf("Expected prefix $2b$, got %s", prefix)
 	}
 
-	// Verify the hash still works with Compare
+	// Verify the hash works with Compare
 	if err := gobcrypt.Compare(hash, password); err != nil {
 		t.Errorf("Compare failed for hash with $2b$ prefix: %v", err)
 	}
 
-	// Test that bcrypt library can verify both $2a$ and $2b$ prefixes.
-	// Note: We modify the prefix directly to test bcrypt's format tolerance,
-	// not to test actual $2a$ hash generation compatibility.
-	hashWithA := make([]byte, len(hash))
-	copy(hashWithA, hash)
-	hashWithA[2] = 'a' // Change $2b$ to $2a$
+	// Test that the underlying bcrypt library generates $2a$ hashes by default,
+	// which proves our upgrade2aTo2b function is working.
+	// We use the pre-hashed password directly with standard bcrypt.
+	preHashed := preHashForTest(password)
+	standardHash, err := bcrypt.GenerateFromPassword(preHashed, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Standard bcrypt Generate failed: %v", err)
+	}
 
-	// Verify Compare still works with $2a$ prefix (bcrypt handles both)
-	if err := gobcrypt.Compare(hashWithA, password); err != nil {
-		t.Errorf("Compare should work with $2a$ prefix: %v", err)
+	// The standard library produces $2a$ prefix
+	if string(standardHash[:4]) != "$2a$" {
+		t.Errorf("Expected standard bcrypt to produce $2a$ prefix, got %s", string(standardHash[:4]))
+	}
+
+	// Our library's output should be $2b$, proving the upgrade happened
+	if string(hash[:4]) != "$2b$" {
+		t.Errorf("Our library should produce $2b$ prefix, got %s", string(hash[:4]))
+	}
+}
+
+// preHashForTest duplicates the pre-hashing logic for testing purposes.
+// This allows us to test with standard bcrypt directly.
+func preHashForTest(password []byte) []byte {
+	hash := sha256.Sum256(password)
+	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
+	base64.StdEncoding.Encode(encoded, hash[:])
+	return encoded
+}
+
+// preHashLegacy duplicates the legacy pre-hashing logic (RawStdEncoding without padding).
+func preHashLegacy(password []byte) []byte {
+	hash := sha256.Sum256(password)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
+	base64.RawStdEncoding.Encode(encoded, hash[:])
+	return encoded
+}
+
+func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
+	password := []byte("testpassword")
+
+	// Simulate a legacy hash created with RawStdEncoding (no padding)
+	legacyPreHashed := preHashLegacy(password)
+	legacyHash, err := bcrypt.GenerateFromPassword(legacyPreHashed, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Failed to create legacy hash: %v", err)
+	}
+
+	// Our Compare function should be able to verify this legacy hash
+	if err := gobcrypt.Compare(legacyHash, password); err != nil {
+		t.Errorf("Compare should work with legacy hashes (RawStdEncoding): %v", err)
+	}
+
+	// Also verify new hashes work
+	newHash, err := gobcrypt.Generate(password, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed: %v", err)
+	}
+	if err := gobcrypt.Compare(newHash, password); err != nil {
+		t.Errorf("Compare should work with new hashes (StdEncoding): %v", err)
 	}
 }

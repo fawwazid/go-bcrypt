@@ -17,3 +17,12 @@ func preHashPassword(password []byte) []byte {
 	base64.StdEncoding.Encode(encoded, hash[:])
 	return encoded
 }
+
+// preHashPasswordLegacy returns the legacy RawStdEncoding (no padding) base64 encoding.
+// Used for backward-compatible password verification with older hashes.
+func preHashPasswordLegacy(password []byte) []byte {
+	hash := sha256.Sum256(password)
+	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
+	base64.RawStdEncoding.Encode(encoded, hash[:])
+	return encoded
+}
