@@ -10,7 +10,7 @@ import (
 )
 
 // bcryptPasswordLimit is the maximum password length that bcrypt can process.
-// Passwords longer than this have bytes beyond position 72 ignored by standard bcrypt.
+// Passwords longer than this have bytes beyond the 72nd byte ignored by standard bcrypt.
 const bcryptPasswordLimit = 72
 
 func TestGenerateAndCompare(t *testing.T) {
