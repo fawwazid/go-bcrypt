@@ -78,11 +78,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Fatalf("Generate failed for pass2: %v", err)
 	}
 
-	// Verify hashes are different even though passwords differ only after byte 72
-	// This demonstrates that pre-hashing correctly differentiates these passwords
-	if string(hash1) == string(hash2) {
-		t.Error("Hashes should be different even though passwords differ only after byte 72")
-	}
+	// The following assertion is unreliable and has been removed.
+	// Bcrypt hashes will always differ due to random salts, regardless of password differences.
 
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
