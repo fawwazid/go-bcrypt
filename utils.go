@@ -9,6 +9,8 @@ import (
 // This ensures the password is within the 72-byte limit of bcrypt while
 // providing consistent security for passwords of any length.
 // Note: All passwords are reduced to 256 bits of entropy by the SHA-256 hash.
+// WARNING: This function is exported for testing and migration purposes only.
+// Do NOT use it directly with standard bcrypt functions; use the Generate and Compare functions instead.
 func PreHashPassword(password []byte) []byte {
 	// SHA-256 hash (32 bytes)
 	hash := sha256.Sum256(password)
