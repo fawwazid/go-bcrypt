@@ -98,7 +98,7 @@ func Compare(hash, password []byte) error {
 			return err
 		}
 		// Otherwise, wrap to preserve information about invalid hash
-		return fmt.Errorf("gobcrypt: invalid hash or password mismatch: %w", err)
+		return fmt.Errorf("gobcrypt: invalid hash: %w", err)
 	}
 	return nil
 }
