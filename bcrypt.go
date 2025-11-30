@@ -1,0 +1,105 @@
+// Package gobcrypt provides a wrapper around golang.org/x/crypto/bcrypt
+// that enforces modern security recommendations for password hashing.
+//
+// It handles:
+//   - Minimum cost enforcement (MinCost = 12).
+//   - Long password support via SHA-256 pre-hashing (bypassing the 72-byte limit).
+//   - Automatic upgrade of $2a$ prefixes to $2b$ to signal modern implementation.
+package gobcrypt
+
+import (
+	"errors"
+	"fmt"
+
+	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	// DefaultCost is the default cost for the bcrypt algorithm.
+	// It is set to a work factor that takes a significant amount of time.
+	// 14 is a reasonable default for modern hardware.
+	DefaultCost = 14
+
+	// MinCost is the minimum allowed cost.
+	// Costs below this value will be automatically upgraded to DefaultCost.
+	MinCost = 12
+
+	// MaxCost is the maximum allowed cost.
+	MaxCost = 31
+)
+
+var (
+	ErrCostTooLow = errors.New("cost is too low")
+)
+
+// Generate returns the bcrypt hash of the password at the given cost.
+//
+// If the cost is less than MinCost, it defaults to DefaultCost.
+// If the cost is greater than MaxCost, it returns an error.
+//
+// This function automatically handles passwords longer than 72 bytes by
+// pre-hashing them with SHA-256.
+func Generate(password []byte, cost int) ([]byte, error) {
+	if cost < MinCost {
+		cost = DefaultCost
+	}
+	if cost > MaxCost {
+		return nil, fmt.Errorf("gobcrypt: cost %d exceeds maximum allowed cost %d", cost, MaxCost)
+	}
+
+	// Pre-hash the password to handle lengths > 72 bytes.
+	// We base64 encode the SHA-256 hash to keep it within the printable range bcrypt expects.
+	finalPassword := preHashPassword(password)
+
+	hash, err := bcrypt.GenerateFromPassword(finalPassword, cost)
+	if err != nil {
+		return nil, fmt.Errorf("gobcrypt: failed to generate hash: %w", err)
+	}
+
+	// Convert $2a$ to $2b$ to indicate modern bcrypt.
+	// While x/crypto/bcrypt is safe, $2b$ is the preferred prefix for
+	// implementations that handle length correctly (which we do via pre-hashing).
+	if len(hash) > 3 && hash[0] == '$' && hash[1] == '2' && hash[2] == 'a' {
+		hash[2] = 'b'
+	}
+
+	return hash, nil
+}
+
+// Compare compares a bcrypt hashed password with its possible plaintext equivalent.
+// Returns nil on success, or an error on failure.
+//
+// It automatically applies the same pre-hashing logic used in Generate.
+func Compare(hash, password []byte) error {
+	// We assume the hash was created using this library's Generate function,
+	// which applies pre-hashing.
+	finalPassword := preHashPassword(password)
+
+	if err := bcrypt.CompareHashAndPassword(hash, finalPassword); err != nil {
+		return fmt.Errorf("gobcrypt: password mismatch or invalid hash: %w", err)
+	}
+	return nil
+}
+
+// Cost returns the hashing cost used to create the given hash.
+func Cost(hash []byte) (int, error) {
+	cost, err := bcrypt.Cost(hash)
+	if err != nil {
+		return 0, fmt.Errorf("gobcrypt: invalid hash: %w", err)
+	}
+	return cost, nil
+}
+
+// NeedsRehash checks if the hash needs to be regenerated.
+// This returns true if:
+//   - The hash is invalid.
+//   - The cost of the hash is lower than the targetCost.
+//
+// This is useful for automatically upgrading legacy hashes to newer standards.
+func NeedsRehash(hash []byte, targetCost int) bool {
+	c, err := bcrypt.Cost(hash)
+	if err != nil {
+		return true
+	}
+	return c < targetCost
+}
