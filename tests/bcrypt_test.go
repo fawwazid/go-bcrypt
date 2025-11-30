@@ -186,7 +186,7 @@ func TestNeedsRehash(t *testing.T) {
 	}
 }
 
-func TestStandardBcryptIncompatibility(t *testing.T) {
+func TestStandardBcryptHashesNotSupported(t *testing.T) {
 	password := []byte("testpassword")
 
 	// Create a hash using standard bcrypt (without pre-hashing)
@@ -314,5 +314,35 @@ func TestBackwardCompatibilityWithLegacyHashes(t *testing.T) {
 	}
 	if err := gobcrypt.Compare(newHash, password); err != nil {
 		t.Errorf("Compare should work with new hashes (StdEncoding): %v", err)
+	}
+}
+
+func TestPasswordExactly72Bytes(t *testing.T) {
+	// Test the boundary condition where the password is exactly at bcrypt's native limit.
+	// This verifies the pre-hashing behavior is correctly triggered for all password lengths.
+	password72 := make([]byte, bcryptPasswordLimit)
+	for i := 0; i < bcryptPasswordLimit; i++ {
+		password72[i] = 'a'
+	}
+
+	hash, err := gobcrypt.Generate(password72, gobcrypt.MinCost)
+	if err != nil {
+		t.Fatalf("Generate failed for exactly 72-byte password: %v", err)
+	}
+
+	// Verify the password matches its hash
+	if err := gobcrypt.Compare(hash, password72); err != nil {
+		t.Errorf("Compare failed for exactly 72-byte password: %v", err)
+	}
+
+	// Verify a slightly different 72-byte password does NOT match
+	password72Different := make([]byte, bcryptPasswordLimit)
+	for i := 0; i < bcryptPasswordLimit-1; i++ {
+		password72Different[i] = 'a'
+	}
+	password72Different[bcryptPasswordLimit-1] = 'b'
+
+	if err := gobcrypt.Compare(hash, password72Different); err == nil {
+		t.Error("Different 72-byte password should not verify against original hash")
 	}
 }
