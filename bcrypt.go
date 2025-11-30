@@ -13,6 +13,7 @@
 package gobcrypt
 
 import (
+	"errors"
 	"fmt"
 
 	"golang.org/x/crypto/bcrypt"
@@ -33,7 +34,7 @@ const (
 )
 
 // ErrCostTooLow is returned when the provided cost is below MinCost.
-var ErrCostTooLow = fmt.Errorf("gobcrypt: cost is below minimum allowed cost %d", MinCost)
+var ErrCostTooLow = errors.New("gobcrypt: cost is below minimum allowed cost")
 
 // Generate returns the bcrypt hash of the password at the given cost.
 //

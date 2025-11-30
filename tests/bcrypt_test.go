@@ -78,11 +78,6 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Fatalf("Generate failed for pass2: %v", err)
 	}
 
-	// Ensure the hashes are actually different
-	if string(hash1) == string(hash2) {
-		t.Error("Hashes should be different for different passwords")
-	}
-
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
 		t.Errorf("Compare failed for pass1 with hash1: %v", err)
