@@ -5,6 +5,16 @@ import (
 	"encoding/base64"
 )
 
+// Constants for pre-hashed password lengths.
+// These are the base64-encoded lengths of a 32-byte SHA-256 hash.
+const (
+	// stdEncodedLen is the length of base64.StdEncoding output for a 32-byte SHA-256 hash (includes padding).
+	stdEncodedLen = 44
+
+	// rawStdEncodedLen is the length of base64.RawStdEncoding output for a 32-byte SHA-256 hash (no padding).
+	rawStdEncodedLen = 43
+)
+
 // PreHashPassword hashes the password with SHA-256 and then base64 encodes it.
 // This ensures the password is within the 72-byte limit of bcrypt while
 // providing consistent security for passwords of any length.
@@ -15,7 +25,7 @@ func PreHashPassword(password []byte) []byte {
 	// SHA-256 hash (32 bytes)
 	hash := sha256.Sum256(password)
 	// Base64 encode to get a printable string (44 bytes for 32-byte SHA-256 hash)
-	encoded := make([]byte, base64.StdEncoding.EncodedLen(len(hash)))
+	encoded := make([]byte, stdEncodedLen)
 	base64.StdEncoding.Encode(encoded, hash[:])
 	return encoded
 }
@@ -26,7 +36,7 @@ func PreHashPassword(password []byte) []byte {
 // Do not use it directly with standard bcrypt functions; use the Compare function instead.
 func PreHashPasswordLegacy(password []byte) []byte {
 	hash := sha256.Sum256(password)
-	encoded := make([]byte, 43) // base64.RawStdEncoding.EncodedLen(32)
+	encoded := make([]byte, rawStdEncodedLen)
 	base64.RawStdEncoding.Encode(encoded, hash[:])
 	return encoded
 }
