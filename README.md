@@ -109,6 +109,10 @@ func login(password []byte, storedHash []byte) error {
 -   `MinCost` (12): Minimum allowed cost.
 -   `MaxCost` (31): Maximum allowed cost.
 -   `PasswordLimit` (72): Maximum password length (bytes).
+    -   Note: this library automatically pre-hashes passwords longer than
+        `PasswordLimit` using SHA-256 before passing them to bcrypt to avoid
+        silent truncation. Use `Prehash` if you want to pre-hash passwords
+        yourself (for example, to store derived values or for compatibility).
 
 ### Functions
 
@@ -116,6 +120,7 @@ func login(password []byte, storedHash []byte) error {
 -   `Compare(hash, password []byte) error`: Compares a hash with a password.
 -   `Cost(hash []byte) (int, error)`: Returns the cost of a hash.
 -   `NeedsRehash(hash []byte, targetCost int) bool`: Checks if a hash needs to be updated.
+-   `Prehash(password []byte) []byte`: Returns a SHA-256 digest of `password`.
 
 ## Running Tests
 

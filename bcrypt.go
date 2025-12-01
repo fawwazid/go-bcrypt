@@ -28,8 +28,11 @@ import (
 //   - []byte: The generated bcrypt hash.
 //   - error: An error if the cost is invalid or generation fails.
 func Generate(password []byte, cost int) ([]byte, error) {
+	// If the provided password exceeds bcrypt's input limit, pre-hash it
+	// with SHA-256 to produce a fixed-length input. This avoids silent
+	// truncation by bcrypt and allows support for arbitrarily long passwords.
 	if len(password) > PasswordLimit {
-		return nil, fmt.Errorf("%w: got %d bytes", ErrPasswordTooLong, len(password))
+		password = Prehash(password)
 	}
 	if cost < MinCost {
 		return nil, fmt.Errorf("%w: got %d", ErrCostTooLow, cost)
@@ -61,6 +64,11 @@ func Generate(password []byte, cost int) ([]byte, error) {
 func Compare(hash, password []byte) error {
 	if len(hash) == 0 {
 		return ErrHashEmpty
+	}
+	// If the provided password is longer than bcrypt's input limit, it must
+	// be pre-hashed the same way `Generate` does so comparison succeeds.
+	if len(password) > PasswordLimit {
+		password = Prehash(password)
 	}
 
 	err := bcrypt.CompareHashAndPassword(hash, password)
@@ -105,3 +113,4 @@ func NeedsRehash(hash []byte, targetCost int) bool {
 	}
 	return c < targetCost
 }
+
