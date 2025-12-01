@@ -9,9 +9,7 @@ import "crypto/sha256"
 // scenarios).
 func Prehash(password []byte) []byte {
 	sum := sha256.Sum256(password)
-	b := make([]byte, sha256.Size)
-	copy(b, sum[:])
-	return b
+	return sum[:]
 }
 
 // needsPrehash reports whether the password should be pre-hashed before
