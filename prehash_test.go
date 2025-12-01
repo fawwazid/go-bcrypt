@@ -18,12 +18,12 @@ func TestPrehashDeterministic(t *testing.T) {
 }
 
 func TestNeedsPrehash(t *testing.T) {
-	short := bytes.Repeat([]byte("a"), PasswordLimit)
-	long := append(append([]byte{}, short...), 'b')
-	if needsPrehash(short) {
-		t.Fatalf("needsPrehash returned true for short password")
+	atLimit := bytes.Repeat([]byte("a"), PasswordLimit)    // exactly PasswordLimit bytes
+	overLimit := append(append([]byte{}, atLimit...), 'b') // PasswordLimit + 1 bytes
+	if needsPrehash(atLimit) {
+		t.Fatalf("needsPrehash returned true for password at PasswordLimit (%d bytes)", PasswordLimit)
 	}
-	if !needsPrehash(long) {
-		t.Fatalf("needsPrehash returned false for long password")
+	if !needsPrehash(overLimit) {
+		t.Fatalf("needsPrehash returned false for password over PasswordLimit (%d bytes)", PasswordLimit+1)
 	}
 }
