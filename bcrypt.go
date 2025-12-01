@@ -35,6 +35,9 @@ const (
 // ErrCostTooLow is returned when the provided cost is below MinCost.
 var ErrCostTooLow = errors.New("gobcrypt: cost is below minimum allowed cost")
 
+// ErrCostTooHigh is returned when the provided cost is above MaxCost.
+var ErrCostTooHigh = errors.New("gobcrypt: cost exceeds maximum allowed cost")
+
 // Generate returns the bcrypt hash of the password at the given cost.
 //
 // If the cost is less than MinCost, it returns ErrCostTooLow.
@@ -49,7 +52,7 @@ func Generate(password []byte, cost int) ([]byte, error) {
 		return nil, fmt.Errorf("%w: got %d", ErrCostTooLow, cost)
 	}
 	if cost > MaxCost {
-		return nil, fmt.Errorf("gobcrypt: cost %d exceeds maximum allowed cost %d", cost, MaxCost)
+		return nil, fmt.Errorf("%w: got %d", ErrCostTooHigh, cost)
 	}
 
 	// Pre-hash the password to handle lengths > 72 bytes.
@@ -64,16 +67,16 @@ func Generate(password []byte, cost int) ([]byte, error) {
 	// Set $2b$ prefix on output for consistency with modern practices.
 	// Note: golang.org/x/crypto/bcrypt uses $2a$ by default and is completely safe.
 	// This is a cosmetic change for signaling modern implementation practices.
-	hash = upgrade2aTo2b(hash)
+	hash = upgradePrefixTo2b(hash)
 
 	return hash, nil
 }
 
-// upgrade2aTo2b converts a bcrypt hash with $2a$ prefix to $2b$ prefix.
+// upgradePrefixTo2b converts a bcrypt hash with $2a$ prefix to $2b$ prefix.
 // This is a cosmetic change as both prefixes are functionally equivalent
 // in Go's bcrypt implementation, but $2b$ signals modern practices.
 // Always returns a new slice to avoid mutating the input and ensure consistent behavior.
-func upgrade2aTo2b(hash []byte) []byte {
+func upgradePrefixTo2b(hash []byte) []byte {
 	result := make([]byte, len(hash))
 	copy(result, hash)
 	if len(hash) > 3 && hash[0] == '$' && hash[1] == '2' && hash[2] == 'a' {
@@ -93,6 +96,10 @@ func upgrade2aTo2b(hash []byte) []byte {
 // the current encoding (StdEncoding with padding) and legacy encoding
 // (RawStdEncoding without padding).
 func Compare(hash, password []byte) error {
+	if len(hash) == 0 {
+		return fmt.Errorf("gobcrypt: hash must not be empty")
+	}
+
 	// First try with current encoding (StdEncoding with padding)
 	finalPassword := PreHashPassword(password)
 	err := bcrypt.CompareHashAndPassword(hash, finalPassword)

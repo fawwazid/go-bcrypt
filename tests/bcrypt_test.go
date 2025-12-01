@@ -63,7 +63,7 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 	// only beyond the 72-byte bcrypt limit do NOT cross-verify (i.e., each password
 	// should only verify against its own hash).
 	// Without pre-hashing, bcrypt would truncate both passwords and treat them as equal.
-	
+
 	// Two passwords identical in first bcryptPasswordLimit bytes but different after
 	pass1 := make([]byte, bcryptPasswordLimit+1)
 	pass2 := make([]byte, bcryptPasswordLimit+1)
@@ -125,10 +125,13 @@ func TestCostValidation(t *testing.T) {
 		t.Fatalf("Compare failed after Generate with MinCost: %v", err)
 	}
 
-	// Check max cost
+	// Cost too high should return an error
 	_, err = gobcrypt.Generate([]byte("pass"), 32)
 	if err == nil {
-		t.Error("Expected error for cost > 31")
+		t.Fatal("Expected error for cost > 31")
+	}
+	if !errors.Is(err, gobcrypt.ErrCostTooHigh) {
+		t.Errorf("Expected ErrCostTooHigh, got %v", err)
 	}
 }
 
@@ -255,6 +258,23 @@ func TestEmptyPassword(t *testing.T) {
 	// Verify a non-empty password does NOT match the empty password hash
 	if err := gobcrypt.Compare(hash, []byte("notEmpty")); err == nil {
 		t.Error("Non-empty password should not verify against empty password hash")
+	}
+}
+
+func TestCompareWithEmptyHash(t *testing.T) {
+	// Test that Compare returns an error when the hash is empty
+	emptyHash := []byte{}
+	password := []byte("testpassword")
+
+	err := gobcrypt.Compare(emptyHash, password)
+	if err == nil {
+		t.Error("Compare should return an error for empty hash")
+	}
+
+	// Verify the error message mentions the empty hash
+	expectedErrMsg := "gobcrypt: hash must not be empty"
+	if err.Error() != expectedErrMsg {
+		t.Errorf("Expected error message '%s', got '%s'", expectedErrMsg, err.Error())
 	}
 }
 
