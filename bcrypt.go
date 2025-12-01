@@ -114,4 +114,3 @@ func NeedsRehash(hash []byte, targetCost int) bool {
 	return c < targetCost
 }
 
-// Note: `Prehash` implementation moved to `prehash.go`.
