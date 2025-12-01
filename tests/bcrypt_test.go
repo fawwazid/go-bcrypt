@@ -83,8 +83,8 @@ func TestLongPasswordDifferentiation(t *testing.T) {
 		t.Fatalf("Generate failed for pass2: %v", err)
 	}
 
-	// Note: We don't compare the hashes directly because bcrypt hashes will
-	// always differ due to random salts, regardless of different passwords.
+	// Note: We don't compare the hashes directly because bcrypt uses random salts, making each hash unique.
+	// Instead, we verify that cross-authentication fails, proving the passwords are treated as distinct.
 
 	// Verify each password works with its own hash
 	if err := gobcrypt.Compare(hash1, pass1); err != nil {
