@@ -43,3 +43,7 @@ var ErrCompareFailed = errors.New("gobcrypt: password comparison failed")
 
 // ErrInvalidHash is returned when the hash is invalid.
 var ErrInvalidHash = errors.New("gobcrypt: invalid hash")
+
+// ErrPasswordTooLong is returned when the provided password exceeds
+// the bcrypt algorithm input limit (`PasswordLimit` bytes).
+var ErrPasswordTooLong = errors.New("gobcrypt: password exceeds maximum supported length")

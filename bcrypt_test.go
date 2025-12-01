@@ -115,13 +115,13 @@ func TestCompare(t *testing.T) {
 			t.Errorf("Expected Compare(h72, p73) to succeed, got %v", err)
 		}
 
-		// Generating a hash from a password longer than PasswordLimit may fail
-		// depending on the bcrypt implementation. Ensure Generate returns an
-		// error and that it is wrapped by ErrGenerateFailed.
+		// Generating a hash from a password longer than PasswordLimit is
+		// explicitly rejected by this library. Ensure Generate returns
+		// ErrPasswordTooLong.
 		if _, err := Generate(p73, DefaultCost); err == nil {
 			t.Error("Expected Generate(p73) to fail for >PasswordLimit, got nil")
-		} else if !errors.Is(err, ErrGenerateFailed) {
-			t.Errorf("expected ErrGenerateFailed when generating too-long password, got %v", err)
+		} else if !errors.Is(err, ErrPasswordTooLong) {
+			t.Errorf("expected ErrPasswordTooLong when generating too-long password, got %v", err)
 		}
 	})
 }

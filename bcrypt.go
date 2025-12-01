@@ -28,6 +28,9 @@ import (
 //   - []byte: The generated bcrypt hash.
 //   - error: An error if the cost is invalid or generation fails.
 func Generate(password []byte, cost int) ([]byte, error) {
+	if len(password) > PasswordLimit {
+		return nil, fmt.Errorf("%w: got %d bytes", ErrPasswordTooLong, len(password))
+	}
 	if cost < MinCost {
 		return nil, fmt.Errorf("%w: got %d", ErrCostTooLow, cost)
 	}
