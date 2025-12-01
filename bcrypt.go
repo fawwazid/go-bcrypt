@@ -41,7 +41,7 @@ var ErrCostTooHigh = errors.New("gobcrypt: cost exceeds maximum allowed cost")
 // Generate returns the bcrypt hash of the password at the given cost.
 //
 // If the cost is less than MinCost, it returns ErrCostTooLow.
-// If the cost is greater than MaxCost, it returns an error.
+// If the cost is greater than MaxCost, it returns ErrCostTooHigh.
 //
 // IMPORTANT: This function pre-hashes ALL passwords with SHA-256 before bcrypt.
 // This ensures passwords of any length are processed consistently and securely,
