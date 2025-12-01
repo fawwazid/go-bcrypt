@@ -1,6 +1,8 @@
 package gobcrypt
 
 import (
+	"bytes"
+	"errors"
 	"testing"
 
 	"golang.org/x/crypto/bcrypt"
@@ -35,6 +37,9 @@ func TestGenerate(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for cost too low, got nil")
 		}
+		if !errors.Is(err, ErrCostTooLow) {
+			t.Errorf("expected ErrCostTooLow, got %v", err)
+		}
 	})
 
 	t.Run("CostTooHigh", func(t *testing.T) {
@@ -42,6 +47,9 @@ func TestGenerate(t *testing.T) {
 		_, err := Generate(password, cost)
 		if err == nil {
 			t.Error("Expected error for cost too high, got nil")
+		}
+		if !errors.Is(err, ErrCostTooHigh) {
+			t.Errorf("expected ErrCostTooHigh, got %v", err)
 		}
 	})
 }
@@ -67,12 +75,53 @@ func TestCompare(t *testing.T) {
 		if err == nil {
 			t.Error("Expected error for wrong password, got nil")
 		}
+		if !errors.Is(err, ErrCompareFailed) {
+			t.Errorf("expected ErrCompareFailed for mismatch, got %v", err)
+		}
 	})
 
 	t.Run("EmptyHash", func(t *testing.T) {
 		err := Compare([]byte{}, password)
-		if err != ErrHashEmpty {
+		if !errors.Is(err, ErrHashEmpty) {
 			t.Errorf("Expected ErrHashEmpty, got %v", err)
+		}
+	})
+
+	t.Run("EmptyPassword", func(t *testing.T) {
+		empty := []byte("")
+		h, err := Generate(empty, DefaultCost)
+		if err != nil {
+			t.Fatalf("Generate(empty) failed: %v", err)
+		}
+		if err := Compare(h, empty); err != nil {
+			t.Errorf("Expected empty password to match its hash, got %v", err)
+		}
+	})
+
+	t.Run("PasswordLengthBoundary", func(t *testing.T) {
+		// Passwords longer than PasswordLimit have bytes beyond that ignored by bcrypt.
+		p72 := bytes.Repeat([]byte("a"), PasswordLimit)
+		p73 := append(append([]byte{}, p72...), 'b')
+
+		h72, err := Generate(p72, DefaultCost)
+		if err != nil {
+			t.Fatalf("Generate(p72) failed: %v", err)
+		}
+
+		// Compare hash of 72-byte password with a 73-byte password that differs
+		// only after the 72nd byte: they should compare equal because bcrypt
+		// ignores bytes beyond PasswordLimit.
+		if err := Compare(h72, p73); err != nil {
+			t.Errorf("Expected Compare(h72, p73) to succeed, got %v", err)
+		}
+
+		// Generating a hash from a password longer than PasswordLimit may fail
+		// depending on the bcrypt implementation. Ensure Generate returns an
+		// error and that it is wrapped by ErrGenerateFailed.
+		if _, err := Generate(p73, DefaultCost); err == nil {
+			t.Error("Expected Generate(p73) to fail for >PasswordLimit, got nil")
+		} else if !errors.Is(err, ErrGenerateFailed) {
+			t.Errorf("expected ErrGenerateFailed when generating too-long password, got %v", err)
 		}
 	})
 }
