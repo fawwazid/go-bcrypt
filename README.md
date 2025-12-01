@@ -63,7 +63,7 @@ import (
 func main() {
 	password := []byte("my-super-secret-password")
 	// In a real app, retrieve this hash from your database
-	hash := []byte("$2a$14$...") 
+	hash := []byte("$2a$14$...")
 
 	err := gobcrypt.Compare(hash, password)
 	if err != nil {
