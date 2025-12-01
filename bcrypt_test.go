@@ -108,20 +108,25 @@ func TestCompare(t *testing.T) {
 			t.Fatalf("Generate(p72) failed: %v", err)
 		}
 
-		// Compare hash of 72-byte password with a 73-byte password that differs
-		// only after the 72nd byte: they should compare equal because bcrypt
-		// ignores bytes beyond PasswordLimit.
-		if err := Compare(h72, p73); err != nil {
-			t.Errorf("Expected Compare(h72, p73) to succeed, got %v", err)
+		// With pre-hashing enabled for long passwords, a 73-byte password is
+		// not silently truncated. Therefore, comparing the hash of a 72-byte
+		// password with a 73-byte password that differs after the 72nd byte
+		// should now fail.
+		if err := Compare(h72, p73); err == nil {
+			t.Errorf("Expected Compare(h72, p73) to fail due to pre-hash behavior")
 		}
 
-		// Generating a hash from a password longer than PasswordLimit is
-		// explicitly rejected by this library. Ensure Generate returns
-		// ErrPasswordTooLong.
-		if _, err := Generate(p73, DefaultCost); err == nil {
-			t.Error("Expected Generate(p73) to fail for >PasswordLimit, got nil")
-		} else if !errors.Is(err, ErrPasswordTooLong) {
-			t.Errorf("expected ErrPasswordTooLong when generating too-long password, got %v", err)
+		// Generating a hash from a password longer than PasswordLimit should
+		// succeed because we pre-hash long inputs before passing them to
+		// bcrypt.
+		h73, err := Generate(p73, DefaultCost)
+		if err != nil {
+			t.Fatalf("Generate(p73) failed: %v", err)
+		}
+
+		// And the generated hash should validate with the original long password.
+		if err := Compare(h73, p73); err != nil {
+			t.Errorf("Expected Compare(h73, p73) to succeed, got %v", err)
 		}
 	})
 }
