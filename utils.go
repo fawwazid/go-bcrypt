@@ -26,7 +26,7 @@ func PreHashPassword(password []byte) []byte {
 // Do not use it directly with standard bcrypt functions; use the Compare function instead.
 func PreHashPasswordLegacy(password []byte) []byte {
 	hash := sha256.Sum256(password)
-	encoded := make([]byte, base64.RawStdEncoding.EncodedLen(len(hash)))
+	encoded := make([]byte, 43) // base64.RawStdEncoding.EncodedLen(32)
 	base64.RawStdEncoding.Encode(encoded, hash[:])
 	return encoded
 }
