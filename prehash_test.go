@@ -2,6 +2,7 @@ package gobcrypt
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 )
 
@@ -17,13 +18,17 @@ func TestPrehashDeterministic(t *testing.T) {
 	}
 }
 
-func TestNeedsPrehash(t *testing.T) {
-	atLimit := bytes.Repeat([]byte("a"), PasswordLimit)    // exactly PasswordLimit bytes
-	overLimit := append(append([]byte{}, atLimit...), 'b') // PasswordLimit + 1 bytes
-	if needsPrehash(atLimit) {
-		t.Fatalf("needsPrehash returned true for password at PasswordLimit (%d bytes)", PasswordLimit)
+func TestLegacyPrehashMigration(t *testing.T) {
+	password := bytes.Repeat([]byte("a"), PasswordLimit+1)
+	hash, err := Generate(Prehash(password), MinCost)
+	if err != nil {
+		t.Fatalf("Generate legacy pre-hash: %v", err)
 	}
-	if !needsPrehash(overLimit) {
-		t.Fatalf("needsPrehash returned false for password over PasswordLimit (%d bytes)", PasswordLimit+1)
+
+	if err := Compare(hash, password); !errors.Is(err, ErrPasswordTooLong) {
+		t.Fatalf("expected direct comparison to reject long password, got %v", err)
+	}
+	if err := Compare(hash, Prehash(password)); err != nil {
+		t.Fatalf("compare legacy pre-hash: %v", err)
 	}
 }

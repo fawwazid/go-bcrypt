@@ -14,11 +14,9 @@ import (
 // Generate returns the bcrypt hash of the password at the given cost.
 //
 // It enforces a minimum cost (MinCost) to ensure security.
-// Note: bcrypt has a maximum input length of `PasswordLimit` bytes (72).
-// Bytes beyond this limit are ignored by the underlying algorithm. If your
-// application must support longer passwords, consider pre-hashing them (for
-// example with SHA-256) before calling `Generate`, or enforce a maximum length
-// at the application layer.
+// Passwords longer than PasswordLimit bytes are rejected because bcrypt cannot
+// process them safely and transparent pre-hashing can introduce alternative
+// password representations.
 //
 // Parameters:
 //   - password: The plaintext password to hash.
@@ -28,11 +26,8 @@ import (
 //   - []byte: The generated bcrypt hash.
 //   - error: An error if the cost is invalid or generation fails.
 func Generate(password []byte, cost int) ([]byte, error) {
-	// If the provided password exceeds bcrypt's input limit, pre-hash it
-	// with SHA-256 to produce a fixed-length input. This avoids silent
-	// truncation by bcrypt and allows support for arbitrarily long passwords.
 	if len(password) > PasswordLimit {
-		password = Prehash(password)
+		return nil, fmt.Errorf("%w: got %d bytes, maximum is %d", ErrPasswordTooLong, len(password), PasswordLimit)
 	}
 	if cost < MinCost {
 		return nil, fmt.Errorf("%w: got %d", ErrCostTooLow, cost)
@@ -43,7 +38,7 @@ func Generate(password []byte, cost int) ([]byte, error) {
 
 	hash, err := bcrypt.GenerateFromPassword(password, cost)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrGenerateFailed, err)
+		return nil, fmt.Errorf("%w: %w", ErrGenerateFailed, err)
 	}
 
 	return hash, nil
@@ -51,9 +46,7 @@ func Generate(password []byte, cost int) ([]byte, error) {
 
 // Compare compares a bcrypt hashed password with its possible plaintext equivalent.
 //
-// Note: The bcrypt algorithm ignores bytes beyond `PasswordLimit` (72), so
-// passwords that differ only after that byte will compare as equal. See
-// `PasswordLimit` in `constants.go` for details.
+// Passwords longer than PasswordLimit bytes are rejected, matching Generate.
 //
 // Parameters:
 //   - hash: The bcrypt hash to compare against.
@@ -65,15 +58,12 @@ func Compare(hash, password []byte) error {
 	if len(hash) == 0 {
 		return ErrHashEmpty
 	}
-	// If the provided password is longer than bcrypt's input limit, it must
-	// be pre-hashed the same way `Generate` does so comparison succeeds.
 	if len(password) > PasswordLimit {
-		password = Prehash(password)
+		return fmt.Errorf("%w: got %d bytes, maximum is %d", ErrPasswordTooLong, len(password), PasswordLimit)
 	}
 
-	err := bcrypt.CompareHashAndPassword(hash, password)
-	if err != nil {
-		return fmt.Errorf("%w: %v", ErrCompareFailed, err)
+	if err := bcrypt.CompareHashAndPassword(hash, password); err != nil {
+		return fmt.Errorf("%w: %w", ErrCompareFailed, err)
 	}
 
 	return nil
@@ -90,7 +80,7 @@ func Compare(hash, password []byte) error {
 func Cost(hash []byte) (int, error) {
 	cost, err := bcrypt.Cost(hash)
 	if err != nil {
-		return 0, fmt.Errorf("%w: %v", ErrInvalidHash, err)
+		return 0, fmt.Errorf("%w: %w", ErrInvalidHash, err)
 	}
 	return cost, nil
 }
@@ -113,4 +103,3 @@ func NeedsRehash(hash []byte, targetCost int) bool {
 	}
 	return c < targetCost
 }
-
