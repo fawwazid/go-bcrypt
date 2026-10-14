@@ -2,19 +2,17 @@ package gobcrypt
 
 import "crypto/sha256"
 
-// Prehash returns a SHA-256 digest of the provided password as a byte
-// slice. It is used to convert passwords longer than `PasswordLimit` into a
-// fixed-length input suitable for bcrypt. This function is exported so callers
-// can pre-hash passwords themselves if desired (e.g., for storage/compatibility
-// scenarios).
+// Prehash returns the SHA-256 digest of password. It is retained only to help
+// applications verify and migrate hashes created by versions that performed
+// automatic pre-hashing.
+//
+// Do not use this function when creating new bcrypt hashes. A fast, unkeyed
+// pre-hash can introduce alternative password representations and password-
+// shucking risks unless the complete scheme is explicitly versioned.
+//
+// Deprecated: reject passwords longer than PasswordLimit or migrate to a
+// password hashing algorithm designed for long inputs, such as Argon2id.
 func Prehash(password []byte) []byte {
 	sum := sha256.Sum256(password)
 	return sum[:]
-}
-
-// needsPrehash reports whether the password should be pre-hashed before
-// passing to bcrypt. It is unexported because callers should normally use
-// `Prehash` directly when needed.
-func needsPrehash(password []byte) bool {
-	return len(password) > PasswordLimit
 }

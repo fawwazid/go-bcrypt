@@ -52,6 +52,14 @@ func TestGenerate(t *testing.T) {
 			t.Errorf("expected ErrCostTooHigh, got %v", err)
 		}
 	})
+
+	t.Run("PasswordTooLong", func(t *testing.T) {
+		password := bytes.Repeat([]byte("a"), PasswordLimit+1)
+		_, err := Generate(password, MinCost)
+		if !errors.Is(err, ErrPasswordTooLong) {
+			t.Errorf("expected ErrPasswordTooLong, got %v", err)
+		}
+	})
 }
 
 func TestCompare(t *testing.T) {
@@ -78,6 +86,9 @@ func TestCompare(t *testing.T) {
 		if !errors.Is(err, ErrCompareFailed) {
 			t.Errorf("expected ErrCompareFailed for mismatch, got %v", err)
 		}
+		if !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
+			t.Errorf("expected wrapped bcrypt.ErrMismatchedHashAndPassword, got %v", err)
+		}
 	})
 
 	t.Run("EmptyHash", func(t *testing.T) {
@@ -99,7 +110,6 @@ func TestCompare(t *testing.T) {
 	})
 
 	t.Run("PasswordLengthBoundary", func(t *testing.T) {
-		// Passwords longer than PasswordLimit have bytes beyond that ignored by bcrypt.
 		p72 := bytes.Repeat([]byte("a"), PasswordLimit)
 		p73 := append(append([]byte{}, p72...), 'b')
 
@@ -108,25 +118,12 @@ func TestCompare(t *testing.T) {
 			t.Fatalf("Generate(p72) failed: %v", err)
 		}
 
-		// With pre-hashing enabled for long passwords, a 73-byte password is
-		// not silently truncated. Therefore, comparing the hash of a 72-byte
-		// password with a 73-byte password that differs after the 72nd byte
-		// should now fail.
-		if err := Compare(h72, p73); err == nil {
-			t.Errorf("Expected Compare(h72, p73) to fail due to pre-hash behavior")
+		if err := Compare(h72, p73); !errors.Is(err, ErrPasswordTooLong) {
+			t.Errorf("expected ErrPasswordTooLong, got %v", err)
 		}
 
-		// Generating a hash from a password longer than PasswordLimit should
-		// succeed because we pre-hash long inputs before passing them to
-		// bcrypt.
-		h73, err := Generate(p73, DefaultCost)
-		if err != nil {
-			t.Fatalf("Generate(p73) failed: %v", err)
-		}
-
-		// And the generated hash should validate with the original long password.
-		if err := Compare(h73, p73); err != nil {
-			t.Errorf("Expected Compare(h73, p73) to succeed, got %v", err)
+		if _, err := Generate(p73, DefaultCost); !errors.Is(err, ErrPasswordTooLong) {
+			t.Errorf("expected ErrPasswordTooLong, got %v", err)
 		}
 	})
 }
@@ -153,6 +150,12 @@ func TestCost(t *testing.T) {
 		_, err := Cost([]byte("invalid-hash"))
 		if err == nil {
 			t.Error("Expected error for invalid hash, got nil")
+		}
+		if !errors.Is(err, ErrInvalidHash) {
+			t.Errorf("expected ErrInvalidHash, got %v", err)
+		}
+		if !errors.Is(err, bcrypt.ErrHashTooShort) {
+			t.Errorf("expected wrapped bcrypt.ErrHashTooShort, got %v", err)
 		}
 	})
 }

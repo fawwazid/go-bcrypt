@@ -14,21 +14,33 @@ This library provides a simplified and secure API for hashing and verifying pass
   - **Minimum Cost Enforcement**: Enforces a minimum cost of 12 (returns an error for lower values), ensuring resistance against modern hardware attacks.
   - **Default Cost**: Uses a default cost of 14, which is a reasonable balance between security and performance for modern servers.
 - **Simple API**: Provides easy-to-use `Generate`, `Compare`, `Cost`, and `NeedsRehash` functions.
-- **Automatic Long Password Support**: Automatically handles passwords longer than 72 bytes by pre-hashing them with SHA-256, preventing silent truncation.
+- **Explicit Length Safety**: Rejects passwords longer than bcrypt's 72-byte input limit instead of truncating or transparently pre-hashing them.
 - **Standard Compatibility**: Fully compatible with standard bcrypt implementations (produces `$2a$` hashes).
 
 ## Long Password Support
 
-Standard bcrypt implementations have a limitation where they ignore any bytes in the password beyond the 72nd byte. This can lead to security issues where a long password and a truncated version of it are treated as identical.
+bcrypt has a maximum input length of 72 bytes. `go-bcrypt` rejects longer inputs with `ErrPasswordTooLong` in both `Generate` and `Compare`.
 
-`go-bcrypt` solves this by automatically checking the password length:
+The limit is measured in bytes, not Unicode characters. Applications should validate the encoded password length before registration and use a generic authentication failure response during login.
 
-- If the password is <= 72 bytes, it is passed to bcrypt as-is.
-- If the password is > 72 bytes, it is first hashed using SHA-256, and the resulting digest is passed to bcrypt.
+Earlier versions automatically applied SHA-256 to longer passwords. That behavior was removed because transparent fast pre-hashing can create alternative password representations and password-shucking risks. `Prehash` remains deprecated only to support controlled migration of existing hashes.
 
-This ensures that all characters in the password contribute to the final hash, regardless of length, while maintaining compatibility with standard bcrypt verifiers (as long as they also pre-hash long inputs).
+For new applications that need passwords longer than 72 bytes, prefer Argon2id rather than combining a fast hash with bcrypt.
+
+To verify an existing long-password hash created by an older release, explicitly compare its legacy digest and replace the hash with a new scheme after successful authentication:
+
+```go
+if err := gobcrypt.Compare(storedHash, gobcrypt.Prehash(password)); err != nil {
+	return err
+}
+// Migrate this credential to Argon2id here.
+```
+
+Only use this compatibility path for records known to use the legacy prehash scheme. Store an algorithm/version identifier with password hashes so normal bcrypt and legacy-prehashed records cannot be confused.
 
 ## Installation
+
+Requires Go 1.26 or newer.
 
 ```bash
 go get github.com/fawwazid/go-bcrypt
@@ -121,10 +133,7 @@ func login(password []byte, storedHash []byte) error {
 - `MinCost` (12): Minimum allowed cost.
 - `MaxCost` (31): Maximum allowed cost.
 - `PasswordLimit` (72): Maximum password length (bytes).
-  - Note: this library automatically pre-hashes passwords longer than
-    `PasswordLimit` using SHA-256 before passing them to bcrypt to avoid
-    silent truncation. Use `Prehash` if you want to pre-hash passwords
-    yourself (for example, to store derived values or for compatibility).
+  - `Generate` and `Compare` return `ErrPasswordTooLong` for longer inputs.
 
 ### Functions
 
@@ -132,7 +141,13 @@ func login(password []byte, storedHash []byte) error {
 - `Compare(hash, password []byte) error`: Compares a hash with a password.
 - `Cost(hash []byte) (int, error)`: Returns the cost of a hash.
 - `NeedsRehash(hash []byte, targetCost int) bool`: Checks if a hash needs to be updated.
-- `Prehash(password []byte) []byte`: Returns a SHA-256 digest of `password`.
+- `Prehash(password []byte) []byte`: Deprecated migration helper for hashes created by older releases.
+
+## Security and Compliance
+
+This package provides password hashing, not a complete authentication system. Applications are responsible for password policy, breached-password screening, rate limiting, MFA, TLS, secure storage, and generic login errors.
+
+bcrypt is appropriate for maintaining compatible legacy bcrypt deployments. For new systems, prefer Argon2id. Environments requiring FIPS-validated cryptography should use an approved implementation and algorithm selected under their compliance program; this package does not claim NIST or FIPS certification.
 
 ## Running Tests
 

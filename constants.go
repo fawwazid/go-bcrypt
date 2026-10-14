@@ -17,12 +17,7 @@ const (
 	MaxCost = 31
 
 	// PasswordLimit is the maximum password length that bcrypt can process.
-	// Passwords longer than this have bytes beyond the 72nd byte ignored by standard bcrypt.
-	// This is a limitation of the bcrypt algorithm.
-	// Note: This constant is provided for documentation/user reference and is not
-	// enforced programmatically by the library. If you need to support longer
-	// passwords you should pre-hash them (for example with SHA-256) before calling
-	// `Generate` or enforce a maximum length at the application layer.
+	// Generate and Compare reject longer passwords.
 	PasswordLimit = 72
 )
 
@@ -44,6 +39,5 @@ var ErrCompareFailed = errors.New("gobcrypt: password comparison failed")
 // ErrInvalidHash is returned when the hash is invalid.
 var ErrInvalidHash = errors.New("gobcrypt: invalid hash")
 
-// ErrPasswordTooLong is returned when the provided password exceeds
-// the bcrypt algorithm input limit (`PasswordLimit` bytes).
+// ErrPasswordTooLong is returned when a password exceeds PasswordLimit bytes.
 var ErrPasswordTooLong = errors.New("gobcrypt: password exceeds maximum supported length")
