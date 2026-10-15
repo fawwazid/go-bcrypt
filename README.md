@@ -1,7 +1,6 @@
 # Go - bcrypt
 
 [![Go Reference](https://pkg.go.dev/badge/github.com/fawwazid/go-bcrypt.svg)](https://pkg.go.dev/github.com/fawwazid/go-bcrypt)
-[![Go Report Card](https://goreportcard.com/badge/github.com/fawwazid/go-bcrypt)](https://goreportcard.com/report/github.com/fawwazid/go-bcrypt)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Secure Go bcrypt implementation wrapper.
