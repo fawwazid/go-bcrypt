@@ -1,8 +1,4 @@
-// Package gobcrypt provides a secure wrapper around golang.org/x/crypto/bcrypt.
-//
-// It enforces modern security standards by setting a minimum cost for password hashing
-// and providing helper functions for common operations like comparing passwords and
-// checking if a hash needs to be updated.
+// Package gobcrypt enforces bounded bcrypt costs and password lengths.
 package gobcrypt
 
 import (
@@ -11,21 +7,12 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Generate returns the bcrypt hash of the password at the given cost.
-//
-// It enforces a minimum cost (MinCost) to ensure security.
-// Passwords longer than PasswordLimit bytes are rejected because bcrypt cannot
-// process them safely and transparent pre-hashing can introduce alternative
-// password representations.
-//
-// Parameters:
-//   - password: The plaintext password to hash.
-//   - cost: The cost factor for the bcrypt algorithm.
-//
-// Returns:
-//   - []byte: The generated bcrypt hash.
-//   - error: An error if the cost is invalid or generation fails.
+// Generate hashes a password of at most PasswordLimit bytes at cost MinCost–MaxCost.
+// It returns ErrFIPSUnsupported when FIPS mode is enabled.
 func Generate(password []byte, cost int) ([]byte, error) {
+	if err := checkNonFIPSOperation(); err != nil {
+		return nil, err
+	}
 	if len(password) > PasswordLimit {
 		return nil, fmt.Errorf("%w: got %d bytes, maximum is %d", ErrPasswordTooLong, len(password), PasswordLimit)
 	}
@@ -44,22 +31,27 @@ func Generate(password []byte, cost int) ([]byte, error) {
 	return hash, nil
 }
 
-// Compare compares a bcrypt hashed password with its possible plaintext equivalent.
-//
-// Passwords longer than PasswordLimit bytes are rejected, matching Generate.
-//
-// Parameters:
-//   - hash: The bcrypt hash to compare against.
-//   - password: The plaintext password to verify.
-//
-// Returns:
-//   - error: nil on success, or an error on failure (e.g., mismatch, empty hash).
+// Compare verifies a password using the same cost and length limits as Generate.
+// It returns ErrFIPSUnsupported when FIPS mode is enabled.
 func Compare(hash, password []byte) error {
+	if err := checkNonFIPSOperation(); err != nil {
+		return err
+	}
 	if len(hash) == 0 {
 		return ErrHashEmpty
 	}
 	if len(password) > PasswordLimit {
 		return fmt.Errorf("%w: got %d bytes, maximum is %d", ErrPasswordTooLong, len(password), PasswordLimit)
+	}
+	cost, err := bcrypt.Cost(hash)
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrCompareFailed, err)
+	}
+	if cost < MinCost {
+		return fmt.Errorf("%w: hash cost %d is below %d", ErrCostTooLow, cost, MinCost)
+	}
+	if cost > MaxCost {
+		return fmt.Errorf("%w: hash cost %d exceeds verification limit %d", ErrCostTooHigh, cost, MaxCost)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(hash, password); err != nil {
@@ -69,14 +61,7 @@ func Compare(hash, password []byte) error {
 	return nil
 }
 
-// Cost returns the hashing cost used to create the given hash.
-//
-// Parameters:
-//   - hash: The bcrypt hash to extract the cost from.
-//
-// Returns:
-//   - int: The cost of the hash.
-//   - error: An error if the hash is invalid.
+// Cost returns the encoded work factor or an error for an invalid hash.
 func Cost(hash []byte) (int, error) {
 	cost, err := bcrypt.Cost(hash)
 	if err != nil {
@@ -85,21 +70,8 @@ func Cost(hash []byte) (int, error) {
 	return cost, nil
 }
 
-// NeedsRehash checks if the hash needs to be regenerated.
-//
-// This is useful for automatically upgrading legacy hashes to newer standards
-// (e.g., if the cost used is lower than the current target cost).
-//
-// Parameters:
-//   - hash: The bcrypt hash to check.
-//   - targetCost: The minimum desired cost.
-//
-// Returns:
-//   - bool: true if the hash is invalid or its cost is lower than targetCost.
+// NeedsRehash reports invalid hashes or work factors below targetCost.
 func NeedsRehash(hash []byte, targetCost int) bool {
 	c, err := bcrypt.Cost(hash)
-	if err != nil {
-		return true
-	}
-	return c < targetCost
+	return err != nil || c < targetCost
 }
