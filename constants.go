@@ -3,18 +3,16 @@ package gobcrypt
 import "errors"
 
 const (
-	// DefaultCost is the default cost for the bcrypt algorithm.
-	// It is set to 14, which provides a good balance between security and performance
-	// on modern hardware.
+	// DefaultCost is the default bcrypt work factor; benchmark it for the deployment.
 	DefaultCost = 14
 
 	// MinCost is the minimum allowed cost.
-	// Costs below this value will result in an error to prevent insecure configurations.
 	MinCost = 12
 
 	// MaxCost is the maximum allowed cost.
-	// This is limited by the bcrypt algorithm itself.
-	MaxCost = 31
+	// The library caps work below bcrypt's algorithmic limit of 31 to prevent
+	// unexpectedly expensive generation or verification.
+	MaxCost = 16
 
 	// PasswordLimit is the maximum password length that bcrypt can process.
 	// Generate and Compare reject longer passwords.
