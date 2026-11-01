@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.0.1](https://github.com/fawwazid/go-bcrypt/compare/v2.0.0...v2.0.1) (2026-11-01)
+
+
+### Bug Fixes
+
+* **release:** configure semantic versioning ([#25](https://github.com/fawwazid/go-bcrypt/issues/25)) ([7ba3f78](https://github.com/fawwazid/go-bcrypt/commit/7ba3f78f12195739750ed5aa08f089c087105c18))
+
+
+### Chores
+
+* configure Google Release Please ([747cdbe](https://github.com/fawwazid/go-bcrypt/commit/747cdbea1a985aeea4417dcd9183980f96d1b91b))
+* reset Release Please baseline ([d117dd0](https://github.com/fawwazid/go-bcrypt/commit/d117dd04ac297b143ea599cbcd561c8ff11039d8))
+* sync agent skill setup ([ce96e6c](https://github.com/fawwazid/go-bcrypt/commit/ce96e6c827dfa1597f4705f13d55acf338eae2fc))
+
+
+### Security
+
+* enforce bcrypt rehash cost policy ([#24](https://github.com/fawwazid/go-bcrypt/issues/24)) ([7b47e27](https://github.com/fawwazid/go-bcrypt/commit/7b47e27247d0242f1ecc17191d4de857b672e02c))
+
 ## v2.0.0 — 2026-10-24
 
 Use direct bcrypt with bounded work and no prehash representation.
