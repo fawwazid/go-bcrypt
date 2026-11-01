@@ -24,3 +24,15 @@ Use direct bcrypt with bounded work and no prehash representation.
 ```sh
 go get github.com/fawwazid/go-bcrypt/v2@v2.0.0
 ```
+
+## v1.2.0 — 2026-10-14
+
+- Harden bcrypt password handling and update `golang.org/x/crypto`.
+
+## v1.1.0 — 2025-12-01
+
+- Add password-length validation and pre-hashing support for long passwords.
+
+## v1.0.0 — 2025-12-01
+
+- Initial release of the secure bcrypt wrapper.
