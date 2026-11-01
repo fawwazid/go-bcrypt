@@ -73,5 +73,5 @@ func Cost(hash []byte) (int, error) {
 // NeedsRehash reports invalid hashes or work factors below targetCost.
 func NeedsRehash(hash []byte, targetCost int) bool {
 	c, err := bcrypt.Cost(hash)
-	return err != nil || c < targetCost
+	return err != nil || targetCost < MinCost || targetCost > MaxCost || c < targetCost
 }

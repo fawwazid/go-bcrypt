@@ -3,7 +3,9 @@
 Install: `go get github.com/fawwazid/go-bcrypt/v2@v2.0.0`.
 See [v2 release notes](CHANGELOG.md) for breaking changes.
 
-A bounded bcrypt wrapper for Go 1.27.3.
+A bounded, legacy-only bcrypt wrapper for Go 1.27.3. For new password storage,
+prefer Argon2id when FIPS is not required, or PBKDF2-HMAC-SHA256 when a FIPS
+approved cryptographic module is required.
 
 ## Usage
 
@@ -33,6 +35,10 @@ func main() {
 - `Compare(hash, password)`: applies the same cost range before bcrypt work.
 - `Cost(hash)`: inspect the encoded cost.
 - `NeedsRehash(hash, targetCost)`: report invalid hashes or costs below the target.
+
+Benchmark the cost for your deployment and increase it over time as capacity
+allows. bcrypt is intended for existing systems; it is not the preferred
+choice for new password storage.
 
 Passwords over 72 bytes are rejected. Inputs are never truncated or
 automatically pre-hashed. Use a password scheme supporting longer inputs if
