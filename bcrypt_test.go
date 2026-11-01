@@ -199,4 +199,16 @@ func TestNeedsRehash(t *testing.T) {
 			t.Error("Expected NeedsRehash to return true for invalid hash (fail safe)")
 		}
 	})
+
+	t.Run("InvalidTargetCost", func(t *testing.T) {
+		hash, err := Generate(password, DefaultCost)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, targetCost := range []int{MinCost - 1, MaxCost + 1} {
+			if !NeedsRehash(hash, targetCost) {
+				t.Errorf("NeedsRehash() = false for invalid target cost %d", targetCost)
+			}
+		}
+	})
 }
