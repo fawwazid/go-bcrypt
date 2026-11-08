@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.2](https://github.com/fawwazid/go-bcrypt/compare/v2.0.1...v2.0.2) (2026-11-08)
+
+
+### Documentation
+
+* document branch and pull request workflow ([ea36df9](https://github.com/fawwazid/go-bcrypt/commit/ea36df9c44c8b842575cfd8ad5a31a53ba8dd627))
+
 ## [2.0.1](https://github.com/fawwazid/go-bcrypt/compare/v2.0.0...v2.0.1) (2026-11-01)
 
 
