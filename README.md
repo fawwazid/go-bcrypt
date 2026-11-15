@@ -3,7 +3,7 @@
 Install: `go get github.com/fawwazid/go-bcrypt/v2@v2.0.0`.
 See [v2 release notes](CHANGELOG.md) for breaking changes.
 
-A bounded, legacy-only bcrypt wrapper for Go 1.27.3. For new password storage,
+A bounded, legacy-only bcrypt wrapper for Go 1.27.4. For new password storage,
 prefer Argon2id when FIPS is not required, or PBKDF2-HMAC-SHA256 when a FIPS
 approved cryptographic module is required.
 
