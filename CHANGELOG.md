@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.3](https://github.com/fawwazid/go-bcrypt/compare/v2.0.2...v2.0.3) (2026-11-15)
+
+
+### Bug Fixes
+
+* **security:** update crypto and Go toolchain ([#28](https://github.com/fawwazid/go-bcrypt/issues/28)) ([#29](https://github.com/fawwazid/go-bcrypt/issues/29)) ([a2b6056](https://github.com/fawwazid/go-bcrypt/commit/a2b60564428b75ec29c9fa9c6359c82d9fd95ebc))
+
 ## [2.0.2](https://github.com/fawwazid/go-bcrypt/compare/v2.0.1...v2.0.2) (2026-11-08)
 
 
